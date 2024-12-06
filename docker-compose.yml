@@ -1,0 +1,53 @@
+services:
+  tasklist_app:
+    container_name: tasklist_app
+    build: .
+    ports:
+      - "8080:8080"  # Adjust this if your app runs on a different port
+    environment:
+      - DATABASE_URL=jdbc:postgresql://tasklist_db:5432/tasklist
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      - tasklist_db
+      - redis
+    working_dir: /app
+    command: ["java", "-jar", "tasklist-app.jar"]
+
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  tasklist_db:
+    container_name: tasklist_db
+    image: postgres:15
+    ports:
+      - 5434:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tasklist
+
+  tasklist_test:
+    container_name: tasklist_test
+    image: maven:3.8.4-openjdk-17-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=jdbc:postgresql://tasklist_db:5432/tasklist
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_PROFILES_ACTIVE=test
+    depends_on:
+      - tasklist_db
+      - redis
+    command: mvn test
